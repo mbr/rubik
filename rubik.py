@@ -5,8 +5,9 @@ import gtk
 import gobject
 import time
 import math
-import serial
 from xml.sax.saxutils import escape as xml_escape
+
+import optparse
 
 def button_name(hotkey):
 	if None != hotkey[0]: return gtk.accelerator_name(*hotkey)
@@ -355,6 +356,17 @@ gobject.signal_new('external_input', RubikApp, gobject.SIGNAL_RUN_FIRST, gobject
 
 
 if '__main__' == __name__:
-	si = serial.Serial('/dev/ttyUSB0', 9600)
-	app = RubikApp([si])
+	parser = optparse.OptionParser()
+	parser.add_option('-s', '--serial', action='append', default=[], dest='serial_inputs', nargs=2,
+	                  help="add serial input (two arguments required, the baudrate and the device node)", metavar="BAUDRATE DEVICE")
+	(opts, args) = parser.parse_args()
+
+	inputs = []
+
+	if opts.serial_inputs:
+		import serial
+
+	for (rate, dev) in opts.serial_inputs:
+		inputs.append(serial.Serial(dev, int(rate)))
+	app = RubikApp(inputs)
 	gtk.main()
