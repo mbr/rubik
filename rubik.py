@@ -6,14 +6,19 @@ import gobject
 import time
 import math
 
+from xml.sax.saxutils import escape as xml_escape
+
 class PlayerApplet(object):
 	player_markup = '<span size="50000">%s</span>'
 	button_markup = '<span size="50000" font_weight="bold">%s</span>'
 	time_label_markup = '<span size="80000">%s</span>'
 
-	def __init__(self, app, name):
+	def __init__(self, app, name, hotkey):
 		self.app = app
 		self.name = name
+		self.hotkey = hotkey
+
+		print "MY HOTKEY",hotkey
 
 		# configuration values
 		self.examination_time = self.app.conf['examination_time']
@@ -25,11 +30,11 @@ class PlayerApplet(object):
 		container.remove(self.window)
 
 		# set player name
-		builder.get_object('player_name').set_markup(self.player_markup % name)
+		builder.get_object('player_name').set_markup(self.player_markup % xml_escape(name))
 
-		# attach, set hotkey
-		self.hotkey = self.app.attach(self)
-		builder.get_object('stop_button_label').set_markup(self.button_markup % gtk.accelerator_name(*self.hotkey))
+		# attach
+		self.app.attach(self)
+		builder.get_object('stop_button_label').set_markup(self.button_markup % xml_escape(gtk.accelerator_name(*self.hotkey)))
 
 		# cache object refs
 		self.time_label = builder.get_object('time_label')
@@ -84,7 +89,7 @@ class PlayerApplet(object):
 
 		if delta:
 			time_str = "%02d:%02d.%02d" % (delta/60, delta%60, (delta%1)*100)
-		self.time_label.set_markup(self.time_label_markup % time_str)
+		self.time_label.set_markup(self.time_label_markup % xml_escape(time_str))
 
 
 	def update(self, current_time = None):
@@ -105,6 +110,74 @@ class PlayerApplet(object):
 			self.start()
 
 
+class NewPlayerDialog(object):
+	def __init__(self, app):
+		builder = app.create_builder()
+		self.app = app
+		self.dialog = builder.get_object('new_player_dialog')
+		self.player_name_entry = builder.get_object('player_name_entry')
+		self.player_name_entry.connect("activate", lambda x: self.dialog.response(0))
+
+		self.hotkey_togglebutton = builder.get_object('hotkey_togglebutton')
+		self.hotkey = None
+		self.set_capturing(False)
+
+		builder.connect_signals(self)
+
+	def set_capturing(self, capturing):
+		print "NOW:",capturing
+		self.capturing = capturing
+
+		label = self.hotkey_togglebutton.get_child()
+
+		if capturing:
+			label.set_text('Press your desired hotkey nows')
+			self.hotkey_togglebutton.set_active(True)
+		else:
+			if self.hotkey:
+				label.set_text(gtk.accelerator_name(*self.hotkey))
+			else:
+				label.set_text('Press to set hotkey')
+				self.hotkey_togglebutton.set_active(False)
+
+	def run(self):
+		rv = False
+		while True:
+			response = self.dialog.run()
+			if 1 == response:
+				break
+			self.name = self.player_name_entry.get_text().strip()
+			if not self.name:
+				error_dlg = gtk.MessageDialog(self.dialog, gtk.DIALOG_MODAL, gtk.MESSAGE_INFO, gtk.BUTTONS_OK, "Please enter a name")
+				error_dlg.run()
+				error_dlg.destroy()
+			elif not self.hotkey:
+				error_dlg = gtk.MessageDialog(self.dialog, gtk.DIALOG_MODAL, gtk.MESSAGE_INFO, gtk.BUTTONS_OK, "Please select a hotkey by clicking the hotkey button and pressing a key.")
+				error_dlg.run()
+				error_dlg.destroy()
+			else:
+				rv = True
+				break
+		self.dialog.destroy()
+
+		return rv
+
+	def on_hotkey_togglebutton_toggled(self, *args):
+		self.set_capturing(self.hotkey_togglebutton.get_active())
+
+	def on_new_player_dialog_key_press_event(self, dialog, event):
+		if self.capturing:
+			#hotkey = (event.keyval, event.state)
+			hotkey = (event.keyval, 0)
+			if self.app.hotkey_available(hotkey): self.hotkey = hotkey
+			else:
+				error_dlg = gtk.MessageDialog(self.dialog, gtk.DIALOG_MODAL, gtk.MESSAGE_INFO, gtk.BUTTONS_OK, "That hotkey is already taken.")
+				error_dlg.run()
+				error_dlg.destroy()
+			self.hotkey_togglebutton.set_active(False)
+			return True
+
+
 class RubikApp(object):
 	def __init__(self, ui_file = 'ui.glade'):
 		self.ui_file = ui_file
@@ -121,18 +194,22 @@ class RubikApp(object):
 		self.main_window.show()
 
 		# init hotkeys and players
-		self.hotkeys_available = ['q','p','x','m','g','e', 'u', 'k', 'b', 'a', 'd', 't', '1', '0', '4', '8', '6']
 		self.players = []
+		self.used_hotkeys = []
 
 		# set up keyboard shortcuts
 		self.accel_group = gtk.AccelGroup()
 		(key, mod) = gtk.accelerator_parse("F2")
+		self.used_hotkeys.append( (key,mod) )
 		self.accel_group.connect_group(key, mod, 0, self.on_start_action_activate)
 		(key, mod) = gtk.accelerator_parse("F5")
+		self.used_hotkeys.append( (key,mod) )
 		self.accel_group.connect_group(key, mod, 0, self.on_reset_action_activate)
 		(key, mod) = gtk.accelerator_parse("F10")
+		self.used_hotkeys.append( (key,mod) )
 		self.accel_group.connect_group(key, mod, 0, self.on_add_player_action_activate)
 		(key, mod) = gtk.accelerator_parse("<Control>F10")
+		self.used_hotkeys.append( (key,mod) )
 		self.accel_group.connect_group(key, mod, 0, self.on_clear_action_activate)
 		self.main_window.add_accel_group(self.accel_group)
 
@@ -145,14 +222,18 @@ class RubikApp(object):
 	def num_players(self):
 		return len(self.players)
 
-	def new_hotkey(self, callback):
-		(key, mod) = gtk.accelerator_parse(self.hotkeys_available.pop(0))
+	def new_hotkey(self, hotkey, callback):
+		(key, mod) = hotkey
 		self.accel_group.connect_group(key, mod, 0, callback)
-		return (key, mod)
+		self.used_hotkeys.append(hotkey)
 
-	def reclaim_hotkey(self, (key, mod)):
-		self.accel_group.disconnect_key
-		self.hotkeys_available.append(key)
+	def reclaim_hotkey(self, hotkey):
+		(key, mod) = hotkey
+		self.accel_group.disconnect_key(key, mod)
+		self.used_hotkeys.remove(hotkey)
+
+	def hotkey_available(self, hotkey):
+		return hotkey not in self.used_hotkeys
 
 	def get_time(self):
 		return self.current_time
@@ -177,11 +258,9 @@ class RubikApp(object):
 		(x, y) = (self.num_players % maxcols, self.num_players / maxcols)
 		self.players.append(player)
 
-
 		self.player_container.attach(player.window, x, x+1, y, y+1)
 		self.player_container.resize(max(maxcols, self.num_players%4), self.num_players/4 + 1)
-		hotkey = self.new_hotkey(player.on_player_toggle_activate)
-		return hotkey
+		self.new_hotkey(player.hotkey, player.on_player_toggle_activate)
 
 	def unattach(self, player):
 		self.players.remove(player)
@@ -200,22 +279,10 @@ class RubikApp(object):
 
 	def on_add_player_action_activate(self, *args):
 		builder = self.create_builder()
-		dialog = builder.get_object('new_player_dialog')
-		player_name_entry = builder.get_object('player_name_entry')
-		player_name_entry.connect("activate", lambda x: dialog.response(0))
+		dialog = NewPlayerDialog(self)
 
-		while True:
-			response = dialog.run()
-			if 1 == response:
-				name = False
-				break
-			name = player_name_entry.get_text().strip()
-			if "" == name: continue
-			break
-		dialog.destroy()
-
-		if name:
-			PlayerApplet(self, name)
+		if dialog.run():
+			PlayerApplet(self, dialog.name, dialog.hotkey)
 
 	def on_clear_action_activate(self, *args):
 		for player in list(self.players):
