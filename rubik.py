@@ -9,9 +9,9 @@ import math
 from xml.sax.saxutils import escape as xml_escape
 
 class PlayerApplet(object):
-	player_markup = '<span size="50000">%s</span>'
-	button_markup = '<span size="50000" font_weight="bold">%s</span>'
-	time_label_markup = '<span size="80000">%s</span>'
+	player_markup = '<span size="30000">%s</span>'
+	button_markup = '<span size="45000" font_weight="bold">%s</span>'
+	time_label_markup = '<span size="50000">%s</span>'
 
 	def __init__(self, app, name, hotkey):
 		self.app = app
@@ -179,7 +179,7 @@ class RubikApp(object):
 		self.ui_file = ui_file
 		self.conf = {
 			'examination_time': 15,
-			'player_container_maxcols': 4,
+			'player_container_maxcols': 3,
 		}
 
 		# init main window
@@ -257,7 +257,7 @@ class RubikApp(object):
 		self.players.append(player)
 
 		self.player_container.attach(player.window, x, x+1, y, y+1)
-		self.player_container.resize(max(maxcols, self.num_players%4), self.num_players/4 + 1)
+		self.player_container.resize((self.num_players-1)/maxcols + 1, min(maxcols, self.num_players-maxcols))
 		self.new_hotkey(player.hotkey, player.on_player_toggle_activate)
 
 	def unattach(self, player):

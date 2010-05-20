@@ -10,23 +10,14 @@
         <child>
           <object class="GtkLabel" id="time_label">
             <property name="visible">True</property>
-            <property name="label" translatable="yes">&lt;span size="80000"&gt;88:88.9999&lt;/span&gt;</property>
+            <property name="label" translatable="yes">&lt;span size="50000"&gt;88:88.9999&lt;/span&gt;</property>
             <property name="use_markup">True</property>
+            <property name="width_chars">10</property>
           </object>
           <packing>
             <property name="expand">False</property>
             <property name="fill">False</property>
             <property name="position">0</property>
-          </packing>
-        </child>
-        <child>
-          <object class="GtkLabel" id="player_name">
-            <property name="visible">True</property>
-            <property name="label" translatable="yes">&lt;span size="50000"&gt;Player&lt;/span&gt;</property>
-            <property name="use_markup">True</property>
-          </object>
-          <packing>
-            <property name="position">1</property>
           </packing>
         </child>
         <child>
@@ -36,26 +27,50 @@
             <property name="receives_default">True</property>
             <property name="related_action">player_toggle</property>
             <child>
-              <object class="GtkLabel" id="stop_button_label">
+              <object class="GtkHBox" id="hbox2">
                 <property name="visible">True</property>
-                <property name="label" translatable="yes">&lt;span size="50000" font_weight="bold"&gt;Q&lt;/span&gt;</property>
-                <property name="use_markup">True</property>
+                <property name="border_width">20</property>
+                <property name="spacing">2</property>
+                <child>
+                  <object class="GtkLabel" id="stop_button_label">
+                    <property name="visible">True</property>
+                    <property name="label" translatable="yes">&lt;span size="45000" font_weight="bold"&gt;Q&lt;/span&gt;</property>
+                    <property name="use_markup">True</property>
+                  </object>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="fill">False</property>
+                    <property name="position">0</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkLabel" id="player_name">
+                    <property name="visible">True</property>
+                    <property name="label" translatable="yes">&lt;span size="30000"&gt;Player&lt;/span&gt;</property>
+                    <property name="use_markup">True</property>
+                    <property name="max_width_chars">11</property>
+                  </object>
+                  <packing>
+                    <property name="position">1</property>
+                  </packing>
+                </child>
               </object>
             </child>
           </object>
           <packing>
             <property name="expand">False</property>
             <property name="fill">False</property>
-            <property name="position">2</property>
+            <property name="position">1</property>
           </packing>
+        </child>
+        <child>
+          <placeholder/>
         </child>
       </object>
     </child>
   </object>
   <object class="GtkWindow" id="main_window">
     <property name="events">GDK_KEY_PRESS_MASK | GDK_STRUCTURE_MASK</property>
-    <property name="default_width">800</property>
-    <property name="default_height">600</property>
     <signal name="destroy_event" handler="gtk_main_quit"/>
     <signal name="key_press_event" handler="on_main_window_key_press_event"/>
     <signal name="delete_event" handler="gtk_main_quit"/>
@@ -72,10 +87,11 @@
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
-                <property name="related_action">start_action</property>
                 <property name="use_action_appearance">True</property>
+                <property name="related_action">start_action</property>
               </object>
               <packing>
+                <property name="expand">False</property>
                 <property name="position">0</property>
               </packing>
             </child>
@@ -84,10 +100,11 @@
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
-                <property name="related_action">reset_action</property>
                 <property name="use_action_appearance">True</property>
+                <property name="related_action">reset_action</property>
               </object>
               <packing>
+                <property name="expand">False</property>
                 <property name="position">1</property>
               </packing>
             </child>
@@ -96,10 +113,11 @@
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
-                <property name="related_action">add_player_action</property>
                 <property name="use_action_appearance">True</property>
+                <property name="related_action">add_player_action</property>
               </object>
               <packing>
+                <property name="expand">False</property>
                 <property name="position">2</property>
               </packing>
             </child>
@@ -108,29 +126,47 @@
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
-                <property name="related_action">clear_action</property>
                 <property name="use_action_appearance">True</property>
+                <property name="related_action">clear_action</property>
               </object>
               <packing>
+                <property name="expand">False</property>
                 <property name="position">3</property>
               </packing>
             </child>
           </object>
           <packing>
             <property name="expand">False</property>
+            <property name="fill">False</property>
             <property name="position">0</property>
           </packing>
         </child>
         <child>
-          <object class="GtkTable" id="player_container">
+          <object class="GtkHBox" id="hbox3">
             <property name="visible">True</property>
             <child>
-              <placeholder/>
+              <object class="GtkTable" id="player_container">
+                <property name="visible">True</property>
+                <property name="column_spacing">30</property>
+                <property name="row_spacing">10</property>
+                <property name="homogeneous">True</property>
+                <child>
+                  <placeholder/>
+                </child>
+              </object>
+              <packing>
+                <property name="padding">10</property>
+                <property name="position">0</property>
+              </packing>
             </child>
           </object>
           <packing>
+            <property name="padding">15</property>
             <property name="position">1</property>
           </packing>
+        </child>
+        <child>
+          <placeholder/>
         </child>
       </object>
     </child>
