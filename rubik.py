@@ -276,7 +276,6 @@ class RubikApp(gobject.GObject):
 		self.hotkey_map.pop(hotkey)
 
 	def hotkey_available(self, hotkey):
-		print "CHECKING FOR HOTKEY",hotkey,"IN",self.hotkey_map
 		return hotkey not in self.hotkey_map
 
 	def get_time(self):
