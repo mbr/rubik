@@ -4,47 +4,46 @@
 import gtk
 import gobject
 import time
+import math
 
 class PlayerApplet(object):
 	player_markup = '<span size="50000">%s</span>'
 	button_markup = '<span size="50000" font_weight="bold">%s</span>'
 	time_label_markup = '<span size="80000">%s</span>'
-	examination_time = 15
 
 	def __init__(self, app, name):
 		self.app = app
 		self.name = name
 
+		# configuration values
+		self.examination_time = self.app.conf['examination_time']
+
+		# remove window from container
 		builder = self.app.create_builder()
 		self.window = builder.get_object('player_window')
 		container = builder.get_object('player_window_container')
 		container.remove(self.window)
-		self.app.add_to_player_container(self.window)
 
 		# set player name
 		builder.get_object('player_name').set_markup(self.player_markup % name)
 
-		# set hotkey
-		hotkey = self.app.claim_hotkey()
-		builder.get_object('stop_button_label').set_markup(self.button_markup % hotkey)
+		# attach, set hotkey
+		self.hotkey = self.app.attach(self)
+		builder.get_object('stop_button_label').set_markup(self.button_markup % self.hotkey)
 
 		# cache object refs
 		self.time_label = builder.get_object('time_label')
 
-		self.app.register_player(self)
-
-		builder.connect_signals(self)
-
 		self.reset()
 
+		builder.connect_signals(self)
 		self.window.show()
 
-	def show_time_diff(self, delta):
-		time_str = "%02d:%02d.%03d" % (delta/60, delta%60, (delta%1)*1000)
-		self.time_label.set_markup(self.time_label_markup % time_str)
 
-	def calc_time(self, current_time):
-		return current_time - self.start_time - self.examination_time
+	def calc_time(self, end_time = None):
+		if not end_time:
+			end_time = self.app.get_time()
+		return end_time - self.start_time - self.examination_time
 
 	@property
 	def running(self):
@@ -54,41 +53,49 @@ class PlayerApplet(object):
 	def stopped(self):
 		return None != self.stop_time
 
-	def in_examination(self, current_time):
-		return self.calc_time(current_time) < self.examination_time
+	@property
+	def in_examination(self):
+		return self.calc_time() < 0
 
-	def start(self, start_time = None):
-		if not start_time:
-			start_time = time.time()
-		self.start_time = start_time
+	def start(self):
+		self.reset()
+		self.start_time = self.app.get_time()
+		self.redraw()
 
 	def reset(self):
 		self.start_time = None
 		self.stop_time = None
-		time_str = "%d" % self.examination_time
+		self.redraw()
+
+	def stop(self):
+		self.stop_time = self.app.get_time()
+		self.redraw()
+
+	def redraw(self):
+		delta = False
+		time_str = "Ready"
+		if self.running:
+			if self.in_examination:
+				time_str = "%d" % math.ceil(abs(self.calc_time()))
+			else:
+				delta = self.calc_time()
+		elif self.stopped:
+			delta = self.calc_time(self.stop_time)
+
+		if delta:
+			time_str = "%02d:%02d.%02d" % (delta/60, delta%60, (delta%1)*100)
 		self.time_label.set_markup(self.time_label_markup % time_str)
 
-	def stop(self, stop_time = None):
-		if not stop_time:
-			stop_time = time.time()
-		self.stop_time = stop_time
-
-		self.show_time_diff(self.calc_time(self.stop_time))
 
 	def update(self, current_time = None):
 		if not self.running:
 			return
 		else:
-			time_elapsed = current_time - self.start_time
-			if self.examination_time > time_elapsed:
-				time_str = "%d" % (self.examination_time-time_elapsed)
-				self.time_label.set_markup(self.time_label_markup % time_str)
-			else:
-				self.show_time_diff(self.calc_time(current_time))
+			self.redraw()
 
 	def on_player_toggle_activate(self, *args):
 		if self.running:
-			if self.in_examination(time.time()):
+			if self.in_examination:
 				self.reset()
 			else:
 				self.stop()
@@ -101,14 +108,16 @@ class PlayerApplet(object):
 class RubikApp(object):
 	def __init__(self, ui_file = 'ui.glade'):
 		self.ui_file = ui_file
+		self.conf = {
+			'examination_time': 2,
+			'player_container_maxcols': 4,
+		}
 
 		# init main window
 		self.builder = self.create_builder()
 
 		self.main_window = self.builder.get_object('main_window')
 		self.player_container = self.builder.get_object('player_container')
-		self.player_container_maxcols = 4
-		self.num_players = 0
 		self.main_window.show()
 
 		self.hotkeys_available = ['q','e','r','y','i','p']
@@ -116,12 +125,26 @@ class RubikApp(object):
 
 		self.builder.connect_signals(self)
 
+		self.tick()
 		gobject.timeout_add(10, self.tick)
 
+	@property
+	def num_players(self):
+		return len(self.players)
+
+	def new_hotkey(self):
+		return self.hotkeys_available.pop(0)
+
+	def reclaim_hotkey(self, hotkey):
+		self.hotkeys_available.append(hotkey)
+
+	def get_time(self):
+		return self.current_time
+
 	def tick(self):
-		current_time = time.time()
+		self.current_time = time.time()
 		for player in self.players:
-			player.update(current_time)
+			player.update()
 		return True
 
 	def create_builder(self):
@@ -133,35 +156,33 @@ class RubikApp(object):
 	def gtk_main_quit(self, *args):
 		gtk.main_quit()
 
-	def player_container_inc(self):
-		pos = (self.num_players % self.player_container_maxcols, self.num_players / self.player_container_maxcols)
-		self.num_players += 1
-
-		self.player_container.resize(
-			min(self.num_players, self.player_container_maxcols),
-			self.num_players / self.player_container_maxcols + 1
-		)
-
-		return pos
-
-	def add_to_player_container(self, window):
-		(x, y) = self.player_container_inc()
-		self.player_container.attach(window, x, x+1, y, y+1)
-
-	def claim_hotkey(self):
-		return self.hotkeys_available.pop(0)
-
-	def register_player(self, player):
+	def attach(self, player):
+		maxcols = self.conf['player_container_maxcols']
+		(x, y) = (self.num_players % maxcols, self.num_players / maxcols)
 		self.players.append(player)
 
+
+		self.player_container.attach(player.window, x, x+1, y, y+1)
+		self.player_container.resize(max(maxcols, self.num_players%4), self.num_players/4 + 1)
+		hotkey = self.new_hotkey()
+		return hotkey
+
+	def unattach(self, player):
+		self.players.remove(player)
+		self.player_container.remove(player.window)
+
+		self.hotkeys_available.append(player.hotkey)
+
 	def on_start_action_activate(self, *args):
-		print "START"
+		self.current_time = time.time()
+		for player in self.players:
+			player.start()
 
 	def on_reset_action_activate(self, *args):
-		print "RESET"
+		for player in self.players:
+			player.reset()
 
 	def on_add_player_action_activate(self, *args):
-		print "NEW PLAYER"
 		builder = self.create_builder()
 		dialog = builder.get_object('new_player_dialog')
 		player_name_entry = builder.get_object('player_name_entry')
@@ -178,11 +199,11 @@ class RubikApp(object):
 		dialog.destroy()
 
 		if name:
-			# now add a new player named "name"
 			PlayerApplet(self, name)
 
 	def on_clear_action_activate(self, *args):
-		print "CLEAR"
+		for player in list(self.players):
+			self.unattach(player)
 
 if '__main__' == __name__:
 	app = RubikApp()
