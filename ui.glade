@@ -22,7 +22,7 @@
         <child>
           <object class="GtkLabel" id="player_name">
             <property name="visible">True</property>
-            <property name="label" translatable="yes">&lt;span size="50000"&gt;Dirk&lt;/span&gt;</property>
+            <property name="label" translatable="yes">&lt;span size="50000"&gt;Player&lt;/span&gt;</property>
             <property name="use_markup">True</property>
           </object>
           <packing>
