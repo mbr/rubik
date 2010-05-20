@@ -121,7 +121,7 @@ class RubikApp(object):
 		self.main_window.show()
 
 		# init hotkeys and players
-		self.hotkeys_available = ['q','e','r','y','i','p']
+		self.hotkeys_available = ['q','p','x','m','g','e', 'u', 'k', 'b', 'a', 'd', 't', '1', '0', '4', '8', '6']
 		self.players = []
 
 		# set up keyboard shortcuts
