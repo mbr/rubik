@@ -5,8 +5,12 @@ import gtk
 import gobject
 import time
 import math
-
+import serial
 from xml.sax.saxutils import escape as xml_escape
+
+def button_name(hotkey):
+	if None != hotkey[0]: return gtk.accelerator_name(*hotkey)
+	else: return '<%d:%d>' % (hotkey[1])
 
 class PlayerApplet(object):
 	player_markup = '<span size="30000">%s</span>'
@@ -32,7 +36,7 @@ class PlayerApplet(object):
 
 		# attach
 		self.app.attach(self)
-		builder.get_object('stop_button_label').set_markup(self.button_markup % xml_escape(gtk.accelerator_name(*self.hotkey)))
+		builder.get_object('stop_button_label').set_markup(self.button_markup % xml_escape(button_name(self.hotkey)))
 
 		# cache object refs
 		self.time_label = builder.get_object('time_label')
@@ -125,6 +129,8 @@ class NewPlayerDialog(object):
 		self.hotkey = None
 		self.set_capturing(False)
 
+		app.connect("external_input", self.on_external_input)
+
 		builder.connect_signals(self)
 
 	def set_capturing(self, capturing):
@@ -137,7 +143,7 @@ class NewPlayerDialog(object):
 			self.hotkey_togglebutton.set_active(True)
 		else:
 			if self.hotkey:
-				label.set_text(gtk.accelerator_name(*self.hotkey))
+				label.set_text(button_name(self.hotkey))
 			else:
 				label.set_text('Press to set hotkey')
 				self.hotkey_togglebutton.set_active(False)
@@ -170,17 +176,28 @@ class NewPlayerDialog(object):
 	def on_new_player_dialog_key_press_event(self, dialog, event):
 		if self.capturing:
 			hotkey = (event.keyval, 0)
-			if self.app.hotkey_available(hotkey): self.hotkey = hotkey
-			else:
-				error_dlg = gtk.MessageDialog(self.dialog, gtk.DIALOG_MODAL, gtk.MESSAGE_INFO, gtk.BUTTONS_OK, "That hotkey is already taken.")
-				error_dlg.run()
-				error_dlg.destroy()
-			self.hotkey_togglebutton.set_active(False)
-			return True
+			return self.assign_hotkey(hotkey)
+
+	def on_external_input(self, app, input_num, data):
+		if self.capturing:
+			hotkey = (None, (input_num, data))
+			return self.assign_hotkey(hotkey)
+
+	def assign_hotkey(self, hotkey):
+		if self.app.hotkey_available(hotkey): self.hotkey = hotkey
+		else:
+			error_dlg = gtk.MessageDialog(self.dialog, gtk.DIALOG_MODAL, gtk.MESSAGE_INFO, gtk.BUTTONS_OK, "That hotkey is already taken.")
+			error_dlg.run()
+			error_dlg.destroy()
+		self.hotkey_togglebutton.set_active(False)
+		return True
 
 
-class RubikApp(object):
-	def __init__(self, ui_file = 'ui.glade'):
+class RubikApp(gobject.GObject):
+	def __init__(self, inputs = [], ui_file = 'ui.glade'):
+		self.__gobject_init__()
+
+		self.inputs = inputs
 		self.ui_file = ui_file
 		self.conf = {
 			'examination_time': 15,
@@ -223,6 +240,28 @@ class RubikApp(object):
 		self.tick()
 		gobject.timeout_add(10, self.tick)
 
+		# intialize inputs
+		for i in xrange(len(self.inputs)):
+			gobject.io_add_watch(self.inputs[i], gobject.IO_IN | gobject.IO_PRI, self.input_data_available, i)
+
+		self.connect("external_input", self.on_external_input)
+
+	def input_data_available(self, source, cb_condition, input_num):
+		data = ord(self.inputs[input_num].read(1))
+
+		# dispatch to app
+		self.emit("external_input", input_num, data)
+		return True
+
+	def on_external_input(self, app, input_num, data):
+		return self.dispatch_hotkey( (None, (input_num, data)) )
+
+	def dispatch_hotkey(self, hotkey):
+		callback = self.hotkey_map.get(hotkey, False)
+		if callback:
+			callback()
+			return True
+
 	@property
 	def num_players(self):
 		return len(self.players)
@@ -236,6 +275,7 @@ class RubikApp(object):
 		self.hotkey_map.pop(hotkey)
 
 	def hotkey_available(self, hotkey):
+		print "CHECKING FOR HOTKEY",hotkey,"IN",self.hotkey_map
 		return hotkey not in self.hotkey_map
 
 	def get_time(self):
@@ -308,11 +348,13 @@ class RubikApp(object):
 
 	def on_main_window_key_press_event(self, window, event):
 		hotkey = (event.keyval, 0)
-		callback = self.hotkey_map.get(hotkey, False)
-		if callback:
-			callback()
-			return True
+		return self.dispatch_hotkey(hotkey)
+
+gobject.type_register(RubikApp)
+gobject.signal_new('external_input', RubikApp, gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE, (gobject.TYPE_INT, gobject.TYPE_INT))
+
 
 if '__main__' == __name__:
-	app = RubikApp()
+	si = serial.Serial('/dev/ttyUSB0', 9600)
+	app = RubikApp([si])
 	gtk.main()
