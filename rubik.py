@@ -29,7 +29,7 @@ class PlayerApplet(object):
 
 		# attach, set hotkey
 		self.hotkey = self.app.attach(self)
-		builder.get_object('stop_button_label').set_markup(self.button_markup % self.hotkey)
+		builder.get_object('stop_button_label').set_markup(self.button_markup % gtk.accelerator_name(*self.hotkey))
 
 		# cache object refs
 		self.time_label = builder.get_object('time_label')
@@ -120,8 +120,21 @@ class RubikApp(object):
 		self.player_container = self.builder.get_object('player_container')
 		self.main_window.show()
 
+		# init hotkeys and players
 		self.hotkeys_available = ['q','e','r','y','i','p']
 		self.players = []
+
+		# set up keyboard shortcuts
+		self.accel_group = gtk.AccelGroup()
+		(key, mod) = gtk.accelerator_parse("F2")
+		self.accel_group.connect_group(key, mod, 0, self.on_start_action_activate)
+		(key, mod) = gtk.accelerator_parse("F5")
+		self.accel_group.connect_group(key, mod, 0, self.on_reset_action_activate)
+		(key, mod) = gtk.accelerator_parse("F10")
+		self.accel_group.connect_group(key, mod, 0, self.on_add_player_action_activate)
+		(key, mod) = gtk.accelerator_parse("<Control>F10")
+		self.accel_group.connect_group(key, mod, 0, self.on_clear_action_activate)
+		self.main_window.add_accel_group(self.accel_group)
 
 		self.builder.connect_signals(self)
 
@@ -132,11 +145,14 @@ class RubikApp(object):
 	def num_players(self):
 		return len(self.players)
 
-	def new_hotkey(self):
-		return self.hotkeys_available.pop(0)
+	def new_hotkey(self, callback):
+		(key, mod) = gtk.accelerator_parse(self.hotkeys_available.pop(0))
+		self.accel_group.connect_group(key, mod, 0, callback)
+		return (key, mod)
 
-	def reclaim_hotkey(self, hotkey):
-		self.hotkeys_available.append(hotkey)
+	def reclaim_hotkey(self, (key, mod)):
+		self.accel_group.disconnect_key
+		self.hotkeys_available.append(key)
 
 	def get_time(self):
 		return self.current_time
@@ -164,14 +180,14 @@ class RubikApp(object):
 
 		self.player_container.attach(player.window, x, x+1, y, y+1)
 		self.player_container.resize(max(maxcols, self.num_players%4), self.num_players/4 + 1)
-		hotkey = self.new_hotkey()
+		hotkey = self.new_hotkey(player.on_player_toggle_activate)
 		return hotkey
 
 	def unattach(self, player):
 		self.players.remove(player)
 		self.player_container.remove(player.window)
 
-		self.hotkeys_available.append(player.hotkey)
+		self.reclaim_hotkey(player.hotkey)
 
 	def on_start_action_activate(self, *args):
 		self.current_time = time.time()

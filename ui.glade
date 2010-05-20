@@ -70,8 +70,8 @@
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
-                <property name="use_action_appearance">True</property>
                 <property name="related_action">start_action</property>
+                <property name="use_action_appearance">True</property>
               </object>
               <packing>
                 <property name="position">0</property>
@@ -82,8 +82,8 @@
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
-                <property name="use_action_appearance">True</property>
                 <property name="related_action">reset_action</property>
+                <property name="use_action_appearance">True</property>
               </object>
               <packing>
                 <property name="position">1</property>
@@ -94,8 +94,8 @@
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
-                <property name="use_action_appearance">True</property>
                 <property name="related_action">add_player_action</property>
+                <property name="use_action_appearance">True</property>
               </object>
               <packing>
                 <property name="position">2</property>
@@ -106,8 +106,8 @@
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
-                <property name="use_action_appearance">True</property>
                 <property name="related_action">clear_action</property>
+                <property name="use_action_appearance">True</property>
               </object>
               <packing>
                 <property name="position">3</property>
@@ -135,28 +135,28 @@
   </object>
   <object class="GtkAction" id="start_action">
     <property name="label">Start all</property>
-    <property name="short_label">Start</property>
+    <property name="short_label">Start (F2)</property>
     <property name="tooltip">Starts all timers simultaneously.</property>
     <property name="stock_id">gtk-media-play</property>
     <signal name="activate" handler="on_start_action_activate"/>
   </object>
   <object class="GtkAction" id="reset_action">
     <property name="label">Reset all timers</property>
-    <property name="short_label">Reset</property>
+    <property name="short_label">Reset (F5)</property>
     <property name="tooltip">Resets all timers</property>
     <property name="stock_id">gtk-media-stop</property>
     <signal name="activate" handler="on_reset_action_activate"/>
   </object>
   <object class="GtkAction" id="add_player_action">
     <property name="label">New player</property>
-    <property name="short_label">Add new player</property>
+    <property name="short_label">Add new player (F10)</property>
     <property name="tooltip">Adds a new player to play.</property>
     <property name="stock_id">gtk-add</property>
     <signal name="activate" handler="on_add_player_action_activate"/>
   </object>
   <object class="GtkAction" id="clear_action">
     <property name="label">Clear all players</property>
-    <property name="short_label">Clear players</property>
+    <property name="short_label">Clear players (Ctrl+F10)</property>
     <property name="tooltip">Clears all players, allowing new ones to be added.</property>
     <property name="stock_id">gtk-clear</property>
     <signal name="activate" handler="on_clear_action_activate"/>
