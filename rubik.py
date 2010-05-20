@@ -132,7 +132,7 @@ class NewPlayerDialog(object):
 		label = self.hotkey_togglebutton.get_child()
 
 		if capturing:
-			label.set_text('Press your desired hotkey nows')
+			label.set_text('Press your desired hotkey now')
 			self.hotkey_togglebutton.set_active(True)
 		else:
 			if self.hotkey:
