@@ -18,8 +18,6 @@ class PlayerApplet(object):
 		self.name = name
 		self.hotkey = hotkey
 
-		print "MY HOTKEY",hotkey
-
 		# configuration values
 		self.examination_time = self.app.conf['examination_time']
 
@@ -126,7 +124,6 @@ class NewPlayerDialog(object):
 		builder.connect_signals(self)
 
 	def set_capturing(self, capturing):
-		print "NOW:",capturing
 		self.capturing = capturing
 
 		label = self.hotkey_togglebutton.get_child()
