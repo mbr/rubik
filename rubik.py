@@ -178,7 +178,7 @@ class RubikApp(object):
 	def __init__(self, ui_file = 'ui.glade'):
 		self.ui_file = ui_file
 		self.conf = {
-			'examination_time': 2,
+			'examination_time': 15,
 			'player_container_maxcols': 4,
 		}
 
