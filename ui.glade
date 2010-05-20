@@ -53,9 +53,11 @@
     </child>
   </object>
   <object class="GtkWindow" id="main_window">
+    <property name="events">GDK_KEY_PRESS_MASK | GDK_STRUCTURE_MASK</property>
     <property name="default_width">800</property>
     <property name="default_height">600</property>
     <signal name="destroy_event" handler="gtk_main_quit"/>
+    <signal name="key_press_event" handler="on_main_window_key_press_event"/>
     <signal name="delete_event" handler="gtk_main_quit"/>
     <child>
       <object class="GtkVBox" id="vbox2">

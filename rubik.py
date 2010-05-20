@@ -112,7 +112,6 @@ class NewPlayerDialog(object):
 	def __init__(self, app):
 		builder = app.create_builder()
 		self.app = app
-		self.modmask = ~ self.app.conf['mask_out_keys']
 		self.dialog = builder.get_object('new_player_dialog')
 		self.player_name_entry = builder.get_object('player_name_entry')
 		self.player_name_entry.connect("activate", lambda x: self.dialog.response(0))
@@ -165,7 +164,7 @@ class NewPlayerDialog(object):
 
 	def on_new_player_dialog_key_press_event(self, dialog, event):
 		if self.capturing:
-			hotkey = (event.keyval, event.state & self.modmask)
+			hotkey = (event.keyval, 0)
 			if self.app.hotkey_available(hotkey): self.hotkey = hotkey
 			else:
 				error_dlg = gtk.MessageDialog(self.dialog, gtk.DIALOG_MODAL, gtk.MESSAGE_INFO, gtk.BUTTONS_OK, "That hotkey is already taken.")
@@ -181,7 +180,6 @@ class RubikApp(object):
 		self.conf = {
 			'examination_time': 2,
 			'player_container_maxcols': 4,
-			'mask_out_keys': gtk.gdk.MOD2_MASK
 		}
 
 		# init main window
@@ -193,21 +191,25 @@ class RubikApp(object):
 
 		# init hotkeys and players
 		self.players = []
-		self.used_hotkeys = []
+		self.hotkey_map = {}
 
 		# set up keyboard shortcuts
 		self.accel_group = gtk.AccelGroup()
 		(key, mod) = gtk.accelerator_parse("F2")
-		self.used_hotkeys.append( (key,mod) )
+		self.hotkey_map[(key,mod)] = False
+
 		self.accel_group.connect_group(key, mod, 0, self.on_start_action_activate)
 		(key, mod) = gtk.accelerator_parse("F5")
-		self.used_hotkeys.append( (key,mod) )
+		self.hotkey_map[(key,mod)] = False
+
 		self.accel_group.connect_group(key, mod, 0, self.on_reset_action_activate)
 		(key, mod) = gtk.accelerator_parse("F10")
-		self.used_hotkeys.append( (key,mod) )
+		self.hotkey_map[(key,mod)] = False
+
 		self.accel_group.connect_group(key, mod, 0, self.on_add_player_action_activate)
 		(key, mod) = gtk.accelerator_parse("<Control>F10")
-		self.used_hotkeys.append( (key,mod) )
+		self.hotkey_map[(key,mod)] = False
+
 		self.accel_group.connect_group(key, mod, 0, self.on_clear_action_activate)
 		self.main_window.add_accel_group(self.accel_group)
 
@@ -222,16 +224,14 @@ class RubikApp(object):
 
 	def new_hotkey(self, hotkey, callback):
 		(key, mod) = hotkey
-		self.accel_group.connect_group(key, mod, 0, callback)
-		self.used_hotkeys.append(hotkey)
+		self.hotkey_map[hotkey] = callback
 
 	def reclaim_hotkey(self, hotkey):
 		(key, mod) = hotkey
-		self.accel_group.disconnect_key(key, mod)
-		self.used_hotkeys.remove(hotkey)
+		self.hotkey_map.pop(hotkey)
 
 	def hotkey_available(self, hotkey):
-		return hotkey not in self.used_hotkeys
+		return hotkey not in self.hotkey_map
 
 	def get_time(self):
 		return self.current_time
@@ -285,6 +285,13 @@ class RubikApp(object):
 	def on_clear_action_activate(self, *args):
 		for player in list(self.players):
 			self.unattach(player)
+
+	def on_main_window_key_press_event(self, window, event):
+		hotkey = (event.keyval, 0)
+		callback = self.hotkey_map.get(hotkey, False)
+		if callback:
+			callback()
+			return True
 
 if '__main__' == __name__:
 	app = RubikApp()
