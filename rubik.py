@@ -114,6 +114,7 @@ class NewPlayerDialog(object):
 	def __init__(self, app):
 		builder = app.create_builder()
 		self.app = app
+		self.modmask = ~ self.app.conf['mask_out_keys']
 		self.dialog = builder.get_object('new_player_dialog')
 		self.player_name_entry = builder.get_object('player_name_entry')
 		self.player_name_entry.connect("activate", lambda x: self.dialog.response(0))
@@ -167,8 +168,7 @@ class NewPlayerDialog(object):
 
 	def on_new_player_dialog_key_press_event(self, dialog, event):
 		if self.capturing:
-			#hotkey = (event.keyval, event.state)
-			hotkey = (event.keyval, 0)
+			hotkey = (event.keyval, event.state & self.modmask)
 			if self.app.hotkey_available(hotkey): self.hotkey = hotkey
 			else:
 				error_dlg = gtk.MessageDialog(self.dialog, gtk.DIALOG_MODAL, gtk.MESSAGE_INFO, gtk.BUTTONS_OK, "That hotkey is already taken.")
@@ -184,6 +184,7 @@ class RubikApp(object):
 		self.conf = {
 			'examination_time': 2,
 			'player_container_maxcols': 4,
+			'mask_out_keys': gtk.gdk.MOD2_MASK
 		}
 
 		# init main window
