@@ -7,16 +7,54 @@
       <object class="GtkVBox" id="player_window">
         <property name="visible">True</property>
         <property name="orientation">vertical</property>
+        <property name="spacing">10</property>
         <child>
-          <object class="GtkLabel" id="time_label">
+          <object class="GtkVBox" id="vbox1">
             <property name="visible">True</property>
-            <property name="label" translatable="yes">&lt;span size="50000"&gt;88:88.9999&lt;/span&gt;</property>
-            <property name="use_markup">True</property>
-            <property name="width_chars">10</property>
+            <property name="orientation">vertical</property>
+            <property name="spacing">5</property>
+            <child>
+              <object class="GtkHBox" id="hbox5">
+                <property name="visible">True</property>
+                <child>
+                  <object class="GtkButton" id="delete_button">
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="receives_default">True</property>
+                    <property name="use_action_appearance">True</property>
+                    <property name="related_action">player_delete</property>
+                    <property name="use_stock">True</property>
+                  </object>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="fill">False</property>
+                    <property name="padding">8</property>
+                    <property name="position">0</property>
+                  </packing>
+                </child>
+                <child>
+                  <placeholder/>
+                </child>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">False</property>
+                <property name="position">0</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkLabel" id="time_label">
+                <property name="visible">True</property>
+                <property name="label" translatable="yes">&lt;span size="50000"&gt;88:88.9999&lt;/span&gt;</property>
+                <property name="use_markup">True</property>
+                <property name="width_chars">10</property>
+              </object>
+              <packing>
+                <property name="position">1</property>
+              </packing>
+            </child>
           </object>
           <packing>
-            <property name="expand">False</property>
-            <property name="fill">False</property>
             <property name="position">0</property>
           </packing>
         </child>
@@ -62,9 +100,6 @@
             <property name="fill">False</property>
             <property name="position">1</property>
           </packing>
-        </child>
-        <child>
-          <placeholder/>
         </child>
       </object>
     </child>
@@ -290,5 +325,12 @@
   </object>
   <object class="GtkAction" id="player_toggle">
     <signal name="activate" handler="on_player_toggle_activate"/>
+  </object>
+  <object class="GtkAction" id="player_delete">
+    <property name="label">Delete player</property>
+    <property name="short_label">Delete</property>
+    <property name="tooltip">Delete this player</property>
+    <property name="stock_id">gtk-delete</property>
+    <signal name="activate" handler="on_player_delete_activate"/>
   </object>
 </interface>

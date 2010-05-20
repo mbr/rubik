@@ -108,6 +108,11 @@ class PlayerApplet(object):
 			self.start()
 
 
+	def on_player_delete_activate(self, *args):
+		self.app.unattach(self)
+		self.app.reorganize_players()
+
+
 class NewPlayerDialog(object):
 	def __init__(self, app):
 		builder = app.create_builder()
@@ -255,16 +260,31 @@ class RubikApp(object):
 		maxcols = self.conf['player_container_maxcols']
 		(x, y) = (self.num_players % maxcols, self.num_players / maxcols)
 		self.players.append(player)
-
 		self.player_container.attach(player.window, x, x+1, y, y+1)
-		self.player_container.resize((self.num_players-1)/maxcols + 1, min(maxcols, self.num_players-maxcols))
 		self.new_hotkey(player.hotkey, player.on_player_toggle_activate)
+
+		self.resize_player_grid()
+
+	def resize_player_grid(self):
+		maxcols = self.conf['player_container_maxcols']
+		if 0 == self.num_players: self.player_container.resize(1,1)
+		self.player_container.resize((self.num_players-1)/maxcols + 1, min(maxcols, self.num_players-maxcols))
+
+		self.main_window.resize(1,1) # as small as possible
 
 	def unattach(self, player):
 		self.players.remove(player)
 		self.player_container.remove(player.window)
 
 		self.reclaim_hotkey(player.hotkey)
+		self.resize_player_grid()
+
+	def reorganize_players(self):
+		players = list(self.players)
+		for p in players:
+			self.unattach(p)
+		for p in players:
+			self.attach(p)
 
 	def on_start_action_activate(self, *args):
 		self.current_time = time.time()
